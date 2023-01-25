@@ -275,18 +275,19 @@ void LightSensor::activate(bool enable) {
     //std::ofstream polldelay_s("/sys/kernel/smartlamp/polldelay");
 
     if(enable){
-        ifd = LightSensor::openInput("smartlamp");
+        //ifd = LightSensor::openInput("smartlamp");
+        //close(ifd);
         ALOGD("LightSensor is active - poll time %ld !!!!!!!!!!!!!", (signed long int) mSamplingPeriodNs);
-        ALOGD("LightSensor is active - ifd %d !!!!!!!!!!!!!", ifd);
-        LightSensor::enable(enable);
+        //ALOGD("LightSensor is active - ifd %d !!!!!!!!!!!!!", ifd);
+        //LightSensor::enable(enable);
         //enable_s << 1;
         //enable_s.close();
     } else {
         ALOGE("LightSensor is inactive !!!!!!!!!!!!!");
-        LightSensor::enable(enable);
+        //LightSensor::enable(enable);
         //enable_s << 0;
         //enable_s.close();
-        close(ifd);
+        //close(ifd);
     }
 }
 
@@ -336,25 +337,24 @@ std::vector<Event> LightSensor::readEvents() {
     
     std::vector<Event> events;
 
-    input_event const* event;
+    //input_event const* event;
+    //size_t s = 0;
     sensors_event_t mPendingEvent;
-    ssize_t s = 0;
-
-    
     mPendingEvent.timestamp = ::android::elapsedRealtimeNano();
 
-    if(ifd != 0){
-        //std::ifstream in("/sys/kernel/smartlamp/ldr"); // input
-          
-        s = mInputReader.fill(ifd);
+    //if(ifd != 0){
+    std::ifstream in("/sys/kernel/smartlamp/ldr"); // input
+        
+    //s = mInputReader.fill(ifd);
 
-        /*if(in) {
-            in >> sensorRead; 
-        } */
-    }
+    if(in) {
+        in >> sensorRead; 
+        in.close();
+    } 
+    //}
 
 
-    int count = 4;
+    /*int count = 4;
 
     while(s !=0 && count && mInputReader.readEvent(&event)){
         int type = event->type;
@@ -371,9 +371,10 @@ std::vector<Event> LightSensor::readEvents() {
         }
 
         mInputReader.next();
-    }
+    }*/
 
     ALOGE("LightSensor: READ EVENT %f", sensorRead);
+    //ALOGE("LightSensor: ifd %d", ifd);
 
     Event event_s;
     event_s.sensorHandle = mSensorInfo.sensorHandle;
