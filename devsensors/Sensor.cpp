@@ -227,65 +227,6 @@ ContinuousSensor::ContinuousSensor(int32_t sensorHandle, ISensorsEventCallback* 
     mSensorInfo.flags |= SensorFlagBits::CONTINUOUS_MODE;
 }
 
-LightSensor::LightSensor(int32_t sensorHandle, ISensorsEventCallback* callback)
-    : OnChangeSensor(sensorHandle, callback),
-         mInputReader((size_t)(4)) 
-    {
-    mSensorInfo.name = "Smartlamp Light Sensor";
-    mSensorInfo.vendor = "devtitans";
-    mSensorInfo.type = SensorType::LIGHT;
-    mSensorInfo.typeAsString = SENSOR_STRING_TYPE_LIGHT;
-    mSensorInfo.maxRange = 43000.0f;
-    mSensorInfo.resolution = 10.0f;
-    mSensorInfo.power = 0.001f;         // mA
-    mSensorInfo.minDelay = 200 * 1000;  // microseconds
-    
-}
-
-void LightSensor::activate(bool enable) {
-    OnChangeSensor::activate(enable);
-    //std::ofstream enable_s("/sys/kernel/smartlamp/enable");
-    //std::ofstream polldelay_s("/sys/kernel/smartlamp/polldelay");
-
-    if(enable){
-        //ifd = LightSensor::openInput("smartlamp");
-        //close(ifd);
-        ALOGD("LightSensor is active - poll time %ld !!!!!!!!!!!!!", (signed long int) mSamplingPeriodNs);
-        //ALOGD("LightSensor is active - ifd %d !!!!!!!!!!!!!", ifd);
-        //LightSensor::enable(enable);
-        //enable_s << 1;
-        //enable_s.close();
-    } else {
-        ALOGE("LightSensor is inactive !!!!!!!!!!!!!");
-        //LightSensor::enable(enable);
-        //enable_s << 0;
-        //enable_s.close();
-        //close(ifd);
-    }
-}
-
-std::vector<Event> LightSensor::readEvents() {
-    std::ifstream in("/sys/kernel/smartlamp/ldr"); // open sysfs file to read sensor read
-    
-    std::vector<Event> events;
-
-    Event event_s;
-    event_s.timestamp = ::android::elapsedRealtimeNano();
-    event_s.sensorHandle = mSensorInfo.sensorHandle;
-    event_s.sensorType = mSensorInfo.type;
-        
-    if(in) {
-        in >> sensorRead; 
-        in.close();
-    } 
-    ALOGE("LightSensor: READ EVENT %f", sensorRead);
-
-    event_s.u.scalar = sensorRead;
-    events.push_back(event_s);
-
-    return events;
-}
-
 }  // namespace implementation
 }  // namespace subhal
 }  // namespace V2_1
