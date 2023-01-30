@@ -87,8 +87,6 @@ void Sensor::batch(int64_t samplingPeriodNs) {
     if (mSamplingPeriodNs != samplingPeriodNs) {
         mSamplingPeriodNs = samplingPeriodNs;
 
-        std::string msg = "LightSensor: samplingPeriodNs: " + std::to_string(samplingPeriodNs);
-        ALOGD("%s", msg.c_str());
         // Wake up the 'run' thread to check if a new event should be generated now
         mWaitCV.notify_all();
     }
@@ -233,7 +231,7 @@ LightSensor::LightSensor(int32_t sensorHandle, ISensorsEventCallback* callback)
     : OnChangeSensor(sensorHandle, callback),
          mInputReader((size_t)(4)) 
     {
-    mSensorInfo.name = "Smartlamp Light Sensor ";
+    mSensorInfo.name = "Smartlamp Light Sensor";
     mSensorInfo.vendor = "devtitans";
     mSensorInfo.type = SensorType::LIGHT;
     mSensorInfo.typeAsString = SENSOR_STRING_TYPE_LIGHT;
@@ -243,31 +241,6 @@ LightSensor::LightSensor(int32_t sensorHandle, ISensorsEventCallback* callback)
     mSensorInfo.minDelay = 200 * 1000;  // microseconds
     
 }
-
-int LightSensor::enable(bool enable){
-    std::ofstream in("/sys/class/input/"+std::string(input_name)+"/device/enable", std::ios::trunc); // input
-
-    int inputValue = enable ? 1 : 0;
-    
-    if(in) {
-        in << inputValue;
-        in.close();
-
-        std::string  enable_states[2] = {"disabled", "enabled"};
-        std::string msg = "Lightsensor is " + enable_states[enable] + " event: " + input_name;
-        ALOGD("%s", msg.c_str());
-
-        return 1;
-    } else{
-        ALOGD("LightSensor cannot be enabled (unable to access enable file) %s", input_name);
-        return 0;
-    }
-}
-
-/*void LightSensor::batch(int64_t samplingPeriodNs) {
-    Sensor::batch(samplingPeriodNs);
-    //send mSamplingPeriodNs to sensor
-}*/
 
 void LightSensor::activate(bool enable) {
     OnChangeSensor::activate(enable);
@@ -291,110 +264,26 @@ void LightSensor::activate(bool enable) {
     }
 }
 
-int LightSensor::openInput(const char* inputName) {
-    int fd = -1;
-    const char *dirname = "/dev/input";
-    char devname[PATH_MAX];
-    char *filename;
-    DIR *dir;
-    struct dirent *de;
-    dir = opendir(dirname);
-    if(dir == NULL)
-        return -1;
-    strcpy(devname, dirname);
-    filename = devname + strlen(devname);
-    *filename++ = '/';
-    while((de = readdir(dir))) {
-        ALOGD("LightSensor Looking for input '%s' input device raw", de->d_name);
-        if(de->d_name[0] == '.' &&
-                (de->d_name[1] == '\0' ||
-                        (de->d_name[1] == '.' && de->d_name[2] == '\0')))
-            continue;
-        strcpy(filename, de->d_name);
-        fd = open(devname, O_RDONLY);
-        if (fd>=0) {
-            char name[80];
-            if (ioctl(fd, EVIOCGNAME(sizeof(name) - 1), &name) < 1) {
-                name[0] = '\0';
-            }
-            ALOGD("LightSensor: Looking for input '%s' input device", name);
-            if (!strcmp(name, inputName)) {
-                strcpy(input_name, filename);
-                ALOGD("LightSensor: choosed '%s' as input device", name);
-                break;
-            } else {
-                close(fd);
-                fd = -1;
-            }
-        }
-    }
-    closedir(dir);
-    ALOGE_IF(fd<0, "LightSensor couldn't find '%s' input device", inputName);
-    return fd;
-}
-
 std::vector<Event> LightSensor::readEvents() {
+    std::ifstream in("/sys/kernel/smartlamp/ldr"); // open sysfs file to read sensor read
     
     std::vector<Event> events;
 
-    //input_event const* event;
-    //size_t s = 0;
-    sensors_event_t mPendingEvent;
-    mPendingEvent.timestamp = ::android::elapsedRealtimeNano();
-
-    //if(ifd != 0){
-    std::ifstream in("/sys/kernel/smartlamp/ldr"); // input
+    Event event_s;
+    event_s.timestamp = ::android::elapsedRealtimeNano();
+    event_s.sensorHandle = mSensorInfo.sensorHandle;
+    event_s.sensorType = mSensorInfo.type;
         
-    //s = mInputReader.fill(ifd);
-
     if(in) {
         in >> sensorRead; 
         in.close();
     } 
-    //}
-
-
-    /*int count = 4;
-
-    while(s !=0 && count && mInputReader.readEvent(&event)){
-        int type = event->type;
-		ALOGD("LightSensor readEvents() - event->type is: %d", type);
-		if (type == EV_ABS) {
-			if (event->code == ABS_LIGHT) {
-                mPendingEvent.type = type;
-                mPendingEvent.light = (float) event->value;
-                sensorRead = mPendingEvent.light;
-            }
-        }else if (type == EV_SYN) {
-            mPendingEvent.timestamp = timevalToNano(event->time);
-            count--;
-        }
-
-        mInputReader.next();
-    }*/
-
     ALOGE("LightSensor: READ EVENT %f", sensorRead);
-    //ALOGE("LightSensor: ifd %d", ifd);
 
-    Event event_s;
-    event_s.sensorHandle = mSensorInfo.sensorHandle;
-    event_s.sensorType = mSensorInfo.type;
-    event_s.timestamp = mPendingEvent.timestamp;
     event_s.u.scalar = sensorRead;
     events.push_back(event_s);
 
-    std::vector<Event> outputEvents;
-
-    // Implementing on-change sensor behavior (maybe not needed due to input device event code)
-    for (auto iter = events.begin(); iter != events.end(); ++iter) {
-        Event ev = *iter;
-        if (ev.u.vec3 != mPreviousEvent.u.vec3 || !mPreviousEventSet) {
-            outputEvents.push_back(ev);
-            mPreviousEvent = ev;
-            mPreviousEventSet = true;
-        }
-    }
-    return outputEvents;
+    return events;
 }
 
 }  // namespace implementation

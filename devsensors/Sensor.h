@@ -24,8 +24,6 @@
 #include <thread>
 #include <vector>
 
-#include "InputEventReader.h"
-
 using ::android::hardware::sensors::V1_0::OperationMode;
 using ::android::hardware::sensors::V1_0::Result;
 using ::android::hardware::sensors::V2_1::Event;
@@ -107,17 +105,8 @@ class LightSensor : public OnChangeSensor {
   protected:
     void activate(bool activ) override;
     std::vector<Event> readEvents() override;
-    //void batch(int64_t samplingPeriodNs) override;
-    int openInput(const char* inputName);
-    int enable(bool actv);
 
   protected:
-    char input_name[PATH_MAX];
-    int ifd;
-    InputEventCircularReader mInputReader;
-    int ABS_LIGHT = 0x29;
-    int ID_L = 0x100;
-	  int mEnabled;
     float sensorRead = 0;
 
     static int64_t timevalToNano(timeval const& t) {
